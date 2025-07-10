@@ -53,28 +53,35 @@ install_ansible_latest() {
 
 install_terraform_latest() {
   echo "🌍 Installing latest Terraform..."
+
   TMP_DIR=$(mktemp -d)
   cd "$TMP_DIR"
 
-  LATEST_URL=$(curl -s https://api.github.com/repos/hashicorp/terraform/releases/latest \
-    | jq -r '.assets[] | select(.name | test("linux_amd64.zip$")) | .browser_download_url' | head -n 1)
+  echo "🔎 Fetching latest Terraform version..."
+  VERSION=$(curl -s https://releases.hashicorp.com/terraform/ \
+    | grep -oP 'terraform/[0-9]+\.[0-9]+\.[0-9]+/' \
+    | head -n 1 | cut -d '/' -f 2)
 
-  if [[ -z "$LATEST_URL" ]]; then
-    echo "❌ Failed to fetch Terraform download URL."
+  if [[ -z "$VERSION" ]]; then
+    echo "❌ Could not detect latest Terraform version."
     cd -
     rm -rf "$TMP_DIR"
     return 1
   fi
 
-  echo "⬇️ Downloading from $LATEST_URL"
-  curl -Lo terraform.zip "$LATEST_URL"
-  unzip terraform.zip
+  URL="https://releases.hashicorp.com/terraform/${VERSION}/terraform_${VERSION}_linux_amd64.zip"
+  echo "⬇️ Downloading Terraform $VERSION..."
+  curl -LO "$URL"
+
+  echo "📦 Unzipping..."
+  unzip "terraform_${VERSION}_linux_amd64.zip"
   chmod +x terraform
   sudo mv terraform /usr/local/bin/
 
   cd -
   rm -rf "$TMP_DIR"
-  echo "✅ Terraform installed successfully!"
+
+  echo "✅ Terraform $VERSION installed successfully!"
 }
 
 install_vscode_latest() {
@@ -125,7 +132,7 @@ main() {
   verify_versions
 
   echo -e "\n✅ DevOps setup completed successfully!"
-  echo "🔁 Please reboot or log out and back in to apply Docker group permissions."
+  echo "🔁 Please reboot or log out and log back in to apply Docker group permissions."
 }
 
 main
