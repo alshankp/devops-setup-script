@@ -1,4 +1,4 @@
-git clone https://github.com/yourname/devops-setup-script.git
+git clone https://github.com/alshankp/devops-setup-script.git
 
 cd devops-setup-script
 
