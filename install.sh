@@ -1,7 +1,7 @@
 #!/bin/bash
 set -e
 
-echo "🚀 Starting DevOps environment setup on your local Ubuntu system..."
+echo "🚀 Starting full DevOps setup on local Ubuntu machine..."
 
 install_common_tools() {
   echo "🔧 Installing essential CLI tools..."
@@ -12,6 +12,7 @@ install_common_tools() {
     git \
     zsh \
     unzip \
+    jq \
     software-properties-common \
     apt-transport-https \
     ca-certificates \
@@ -34,8 +35,13 @@ install_node_latest() {
 }
 
 install_docker_latest() {
-  echo "🐳 Installing Docker and Docker Compose..."
-  curl -fsSL https://get.docker.com | sudo sh
+  echo "🐳 Checking Docker installation..."
+  if command -v docker >/dev/null 2>&1; then
+    echo "✅ Docker already installed. Skipping reinstallation."
+  else
+    echo "🐳 Installing Docker and Docker Compose..."
+    curl -fsSL https://get.docker.com | sudo sh
+  fi
   sudo usermod -aG docker "$USER"
 }
 
@@ -49,14 +55,26 @@ install_terraform_latest() {
   echo "🌍 Installing latest Terraform..."
   TMP_DIR=$(mktemp -d)
   cd "$TMP_DIR"
+
   LATEST_URL=$(curl -s https://api.github.com/repos/hashicorp/terraform/releases/latest \
-    | grep "browser_download_url.*linux_amd64.zip" | cut -d '"' -f 4)
+    | jq -r '.assets[] | select(.name | test("linux_amd64.zip$")) | .browser_download_url' | head -n 1)
+
+  if [[ -z "$LATEST_URL" ]]; then
+    echo "❌ Failed to fetch Terraform download URL."
+    cd -
+    rm -rf "$TMP_DIR"
+    return 1
+  fi
+
+  echo "⬇️ Downloading from $LATEST_URL"
   curl -Lo terraform.zip "$LATEST_URL"
   unzip terraform.zip
   chmod +x terraform
   sudo mv terraform /usr/local/bin/
+
   cd -
   rm -rf "$TMP_DIR"
+  echo "✅ Terraform installed successfully!"
 }
 
 install_vscode_latest() {
@@ -87,6 +105,7 @@ verify_versions() {
     ["Git"]="git"
     ["Zsh"]="zsh"
     ["Unzip"]="unzip"
+    ["VS Code"]="code"
   )
 
   for name in "${!tools[@]}"; do
@@ -105,8 +124,8 @@ main() {
   install_vscode_latest
   verify_versions
 
-  echo -e "\n✅ All DevOps tools installed successfully!"
-  echo "🔁 Please log out and log in again or reboot to enable Docker permissions for your user."
+  echo -e "\n✅ DevOps setup completed successfully!"
+  echo "🔁 Please reboot or log out and back in to apply Docker group permissions."
 }
 
 main
